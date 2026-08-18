@@ -9,7 +9,6 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
     <style>
-        /* Reset a globální styly */
         * {
             box-sizing: border-box;
             margin: 0;
@@ -182,7 +181,6 @@
             <div class="vkladac-box">
                 <input type="text" id="tip-input" list="youtuberi-list" placeholder="Napiš jméno YouTubera..." autocomplete="off">
                 <datalist id="youtuberi-list">
-                    <!-- Doplní se pomocí JS -->
                 </datalist>
                 <button onclick="poslatTip()" id="odeslat-btn" class="primarni-tlacitko">Odeslat tip</button>
             </div>
@@ -206,7 +204,6 @@
     </div>
 
     <div class="paticka">
-        <!-- Odkaz spouštějící demo obrazovku -->
         <a href="#" onclick="zobrazDemo(); return false;" class="nenapadny-odkaz">
             💡 Chybí tu tvůj oblíbený YouTuber? Navrhni ho!
         </a>
@@ -227,7 +224,6 @@
 
 
 <script>
-    // Seznam YouTuberů z původního JSONu vložený přímo sem pro funkčnost statické stránky
     const YOUTUBERI = [
         "DodoCZ",
         "Taky Bige",
@@ -242,23 +238,18 @@
     let historiePokusu = [];
     let grafInstance = null;
 
-    // Funkce, která převádí jméno na formát použitý ve jménech souborů (např. "Taky Bige" -> "taky_bige")
     function vytvorBezpecnyNazev(jmeno) {
         if (!jmeno) return "";
-        // Odstranění diakritiky (pro jistotu, pokud by v budoucnu byli YouTubeři s háčky) a malá písmena
         let bezDiakritiky = jmeno.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
-        // Nahrazení mezer podtržítky
         return bezDiakritiky.replace(/\s+/g, "_");
     }
 
-    // Normalizace textu pro porovnávání (zde odstraňujeme vše včetně mezer pro maximální toleranci chyb uživatele)
     function normalizujTextProPorovnani(text) {
         if (!text) return "";
         return text.normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/\s+/g, "").toLowerCase().trim();
     }
 
     async function inicializaceHry() {
-        // Naplnění našeptávače
         const datalist = document.getElementById('youtuberi-list');
         datalist.innerHTML = "";
         YOUTUBERI.forEach(y => {
@@ -267,7 +258,6 @@
             datalist.appendChild(option);
         });
 
-        // Enter v inputu odešle tip
         const tipInput = document.getElementById('tip-input');
         tipInput.addEventListener("keypress", function(event) {
             if (event.key === "Enter") { 
@@ -280,7 +270,6 @@
     }
 
     async function nacistDalsiLogo() {
-        // Vybere náhodného YouTubera, který není stejný jako ten předchozí
         let novyYoutuber = aktualniYoutuber;
         if (YOUTUBERI.length > 1) {
             while (novyYoutuber === aktualniYoutuber) {
@@ -291,7 +280,6 @@
         aktualniUroven = 1;
         historiePokusu = [];
 
-        // UI Reset
         document.getElementById('zprava').className = "info-zprava";
         document.getElementById('zprava').innerHTML = "Zadej svůj první tip níže:";
         document.getElementById('ovladani').style.display = 'block';
@@ -304,7 +292,6 @@
         vklad.disabled = false;
         document.getElementById('odeslat-btn').disabled = false;
 
-        // Sestaví nový přehledný název obrázku
         const bezpecneJmeno = vytvorBezpecnyNazev(aktualniYoutuber);
         const nazevObrazku = `${bezpecneJmeno}_roz_${aktualniUroven}.png`;
         
@@ -333,12 +320,10 @@
         const normSpravne = normalizujTextProPorovnani(aktualniYoutuber);
 
         if (normTip === normSpravne) {
-            // Správná odpověď
             zpravaDiv.className = "info-zprava spravne";
             zpravaDiv.innerHTML = `Skvělá práce! Správná odpověď je <strong>${aktualniYoutuber}</strong>.`;
             dokoncitKolo(true);
         } else {
-            // Špatná odpověď
             if (aktualniUroven < 5) {
                 aktualniUroven++;
                 zpravaDiv.className = "info-zprava vedle";
@@ -353,7 +338,6 @@
                 vklad.value = "";
                 vklad.focus();
             } else {
-                // Konec pokusů
                 zpravaDiv.className = "info-zprava spatne";
                 zpravaDiv.innerHTML = `Pokusy vyčerpány. Odpověď byla: <strong>${aktualniYoutuber}</strong>.`;
                 dokoncitKolo(false);
@@ -377,12 +361,10 @@
         document.getElementById('ovladani').style.display = 'none';
         document.getElementById('dalsi-akce').style.display = 'block';
 
-        // Odhalení ostrého loga
         const img = document.getElementById('logo-img');
         img.className = "ostre-logo";
         img.src = `./logos/${aktualniYoutuber}.png`;
 
-        // Pevné statistiky pro demo verzi (aby to vypadalo realističtěji)
         let stats = {
             "1": 7,
             "2": 15,
@@ -392,7 +374,6 @@
             "neuhodli": 5
         };
         
-        // Přidáme hráčův výsledek do grafu
         if (vyhra) stats[aktualniUroven.toString()]++;
         else stats["neuhodli"]++;
 
@@ -444,7 +425,6 @@
         document.getElementById('gdpr-odkaz').style.display = 'block';
     }
 
-    // Spuštění po načtení stránky
     document.addEventListener("DOMContentLoaded", inicializaceHry);
 </script>
 
