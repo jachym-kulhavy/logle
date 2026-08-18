@@ -1,0 +1,452 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Logle - Poznej YouTubera podle loga (Demo)</title>
+    <link rel="icon" type="image/png" href="icon.png">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <style>
+        /* Reset a globální styly */
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background-color: #F8FAFC;
+            color: #0F172A;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            padding: 32px 16px;
+        }
+
+        .karta-obal, #demo-karta {
+            background: #FFFFFF;
+            width: 100%;
+            max-width: 520px;
+            border-radius: 16px;
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.05), 0 8px 10px -6px rgba(0, 0, 0, 0.05);
+            border: 1px solid #E2E8F0;
+            overflow: hidden;
+            padding: 32px 24px;
+            display: flex;
+            flex-direction: column;
+            gap: 24px;
+        }
+
+        .upozorneni-opakovani {
+            background-color: #EFF6FF;
+            border: 1px solid #BFDBFE;
+            color: #1E40AF;
+            padding: 10px 14px;
+            border-radius: 8px;
+            font-size: 13px;
+            font-weight: 500;
+            text-align: center;
+        }
+
+        .hlavicka { text-align: center; }
+        .hlavicka h1 { font-size: 24px; font-weight: 700; color: #0F172A; margin-bottom: 6px; }
+        .hlavicka .podtitul { font-size: 13px; color: #64748B; line-height: 1.5; }
+
+        .herni-plocha {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 20px;
+        }
+
+        #logo-container {
+            width: 180px; height: 180px;
+            border-radius: 14px; overflow: hidden;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+            background-color: #F1F5F9; border: 3px solid #E2E8F0;
+            display: flex; justify-content: center; align-items: center;
+        }
+
+        #logo-container img { width: 100%; height: 100%; object-fit: cover; }
+        .rozmazane-logo { image-rendering: pixelated; }
+        .ostre-logo { image-rendering: auto; }
+
+        .info-zprava {
+            font-size: 14px; font-weight: 500; text-align: center;
+            padding: 8px 12px; border-radius: 8px; width: 100%;
+        }
+        .info-zprava.spravne { background-color: #ECFDF5; color: #047857; border: 1px dashed #A7F3D0; }
+        .info-zprava.spatne { background-color: #FEF2F2; color: #B91C1C; border: 1px dashed #FCA5A5; }
+        .info-zprava.vedle { background-color: #FFFBEB; color: #B45309; border: 1px dashed #FDE68A; }
+
+        .vstupy-skupina { width: 100%; }
+        .vkladac-box {
+            display: flex; flex-direction: column; gap: 12px; width: 100%;
+        }
+
+        input[type="text"] {
+            width: 100%;
+            padding: 16px 20px;
+            font-size: 16px;
+            border-radius: 10px;
+            border: 1px solid #CBD5E1;
+            background-color: #FFFFFF;
+            color: #0F172A;
+            font-family: inherit;
+            transition: all 0.15s ease-in-out;
+        }
+
+        input[type="text"]:focus {
+            outline: none; border-color: #3B82F6; box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
+        }
+
+        button {
+            font-family: inherit; font-weight: 600; font-size: 15px;
+            padding: 16px 20px; border-radius: 10px; border: none;
+            cursor: pointer; transition: all 0.15s ease-in-out;
+        }
+
+        .primarni-tlacitko { background-color: #2563EB; color: #FFFFFF; width: 100%; }
+        .primarni-tlacitko:hover:not(:disabled) { background-color: #1D4ED8; }
+        .primarni-tlacitko:disabled { background-color: #94A3B8; cursor: not-allowed; }
+
+        .sekundarni-tlacitko { background-color: #10B981; color: #FFFFFF; width: 100%; }
+        .sekundarni-tlacitko:hover { background-color: #059669; }
+
+        .akce-kontejner { width: 100%; }
+
+        .historie-kontejner {
+            width: 100%; background-color: #F8FAFC; border: 1px solid #E2E8F0;
+            border-radius: 10px; padding: 12px 16px; text-align: left;
+        }
+        .historie-kontejner h3 { font-size: 13px; font-weight: 600; color: #475569; margin-bottom: 8px; text-transform: uppercase; }
+        #historie-seznam { list-style: none; display: flex; flex-direction: column; gap: 6px; }
+        #historie-seznam li { font-size: 13px; display: flex; justify-content: flex-start; gap: 8px; padding-bottom: 4px; border-bottom: 1px solid #F1F5F9; }
+        #historie-seznam li:last-child { border-bottom: none; padding-bottom: 0; }
+        .cislo-pokusu { color: #94A3B8; font-weight: 500; min-width: 55px; }
+        .text-pokusu { color: #334155; font-weight: 600; }
+
+        .stats-box {
+            width: 100%; background-color: #FFFFFF; border: 1px solid #E2E8F0;
+            border-radius: 12px; padding: 16px; text-align: left;
+        }
+        .stats-box h3 { font-size: 14px; font-weight: 600; color: #0F172A; margin-bottom: 14px; }
+        .graf-kontejner { height: 180px; position: relative; width: 100%; }
+
+        .paticka { border-top: 1px solid #F1F5F9; padding-top: 16px; text-align: center; }
+
+        .nenapadny-odkaz { color: #94A3B8; font-size: 13px; text-decoration: none; transition: color 0.15s; font-weight: 500; }
+        .nenapadny-odkaz:hover { color: #3B82F6; }
+
+        .gdpr-md-odkaz {
+            display: block;
+            margin-top: 20px;
+            color: #94A3B8;
+            font-size: 13px;
+            text-decoration: none;
+            transition: color 0.15s;
+            font-weight: 500;
+            text-align: center;
+        }
+        .gdpr-md-odkaz:hover { color: #3B82F6; }
+
+        @media (max-width: 480px) {
+            .karta-obal, #demo-karta { padding: 20px 16px; gap: 16px; }
+            .hlavicka h1 { font-size: 20px; }
+            #logo-container { width: 150px; height: 150px; }
+        }
+    </style>
+</head>
+<body>
+
+<div id="hlavni-hra" class="karta-obal">
+    <div class="hlavicka">
+        <h1>Poznej YouTubera</h1>
+        <p class="podtitul">Dokážeš odhadnout jméno z rozmazaných pixelů? Máš 5 pokusů!</p>
+        <span style="display:inline-block; margin-top:8px; background:#FCD34D; color:#B45309; padding:4px 8px; border-radius:6px; font-size:11px; font-weight:bold;">DEMO VERZE</span>
+    </div>
+
+    <div class="herni-plocha">
+        <div id="logo-container">
+            <img id="logo-img" class="rozmazane-logo" src="" alt="Logo YouTubera">
+        </div>
+
+        <div id="zprava" class="info-zprava">Zadej svůj první tip níže:</div>
+
+        <div id="ovladani" class="vstupy-skupina">
+            <div class="vkladac-box">
+                <input type="text" id="tip-input" list="youtuberi-list" placeholder="Napiš jméno YouTubera..." autocomplete="off">
+                <datalist id="youtuberi-list">
+                    <!-- Doplní se pomocí JS -->
+                </datalist>
+                <button onclick="poslatTip()" id="odeslat-btn" class="primarni-tlacitko">Odeslat tip</button>
+            </div>
+        </div>
+
+        <div id="historie-box" class="historie-kontejner" style="display: none;">
+            <h3>Tvoje pokusy v tomto kole:</h3>
+            <ul id="historie-seznam"></ul>
+        </div>
+
+        <div id="stats-vystup" class="stats-box" style="display: none;">
+            <h3>Úspěšnost ostatních hráčů:</h3>
+            <div class="graf-kontejner">
+                <canvas id="grafStatistik"></canvas>
+            </div>
+        </div>
+
+        <div id="dalsi-akce" class="akce-kontejner" style="display: none;">
+            <button onclick="nacistDalsiLogo()" class="sekundarni-tlacitko">Pokračovat na další logo ️</button>
+        </div>
+    </div>
+
+    <div class="paticka">
+        <!-- Odkaz spouštějící demo obrazovku -->
+        <a href="#" onclick="zobrazDemo(); return false;" class="nenapadny-odkaz">
+            💡 Chybí tu tvůj oblíbený YouTuber? Navrhni ho!
+        </a>
+    </div>
+</div>
+
+<a id="gdpr-odkaz" href="#" onclick="zobrazDemo(); return false;" class="gdpr-md-odkaz">Zásady ochrany osobních údajů</a>
+
+<div id="demo-karta" style="display: none; text-align: center;">
+    <div style="font-size: 48px; margin-bottom: 16px;">🚧</div>
+    <h2 style="font-size: 22px; color: #0F172A; margin-bottom: 12px;">Toto je pouze demoverze</h2>
+    <p style="color: #64748B; font-size: 15px; line-height: 1.6; margin-bottom: 32px;">
+        Tato funkce (např. registrace, návrhy nových YouTuberů nebo GDPR) není v této ukázkové verzi hostované na GitHub Pages dostupná, protože vyžaduje serverový backend.<br><br>
+        Demo slouží primárně pro prezentaci herní mechaniky přímo v prohlížeči.
+    </p>
+    <button onclick="skryjDemo()" class="primarni-tlacitko" style="max-width: 250px; margin: 0 auto;">Zpět na hru</button>
+</div>
+
+
+<script>
+    // Seznam YouTuberů z původního JSONu vložený přímo sem pro funkčnost statické stránky
+    const YOUTUBERI = [
+        "DodoCZ",
+        "Taky Bige",
+        "Dodo Reakce",
+        "Bige",
+        "MGFitman",
+        "Agraelus"
+    ];
+
+    let aktualniYoutuber = "";
+    let aktualniUroven = 1;
+    let historiePokusu = [];
+    let grafInstance = null;
+
+    // Funkce, která převádí jméno na formát použitý ve jménech souborů (např. "Taky Bige" -> "taky_bige")
+    function vytvorBezpecnyNazev(jmeno) {
+        if (!jmeno) return "";
+        // Odstranění diakritiky (pro jistotu, pokud by v budoucnu byli YouTubeři s háčky) a malá písmena
+        let bezDiakritiky = jmeno.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+        // Nahrazení mezer podtržítky
+        return bezDiakritiky.replace(/\s+/g, "_");
+    }
+
+    // Normalizace textu pro porovnávání (zde odstraňujeme vše včetně mezer pro maximální toleranci chyb uživatele)
+    function normalizujTextProPorovnani(text) {
+        if (!text) return "";
+        return text.normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/\s+/g, "").toLowerCase().trim();
+    }
+
+    async function inicializaceHry() {
+        // Naplnění našeptávače
+        const datalist = document.getElementById('youtuberi-list');
+        datalist.innerHTML = "";
+        YOUTUBERI.forEach(y => {
+            let option = document.createElement('option');
+            option.value = y;
+            datalist.appendChild(option);
+        });
+
+        // Enter v inputu odešle tip
+        const tipInput = document.getElementById('tip-input');
+        tipInput.addEventListener("keypress", function(event) {
+            if (event.key === "Enter") { 
+                event.preventDefault(); 
+                poslatTip(); 
+            }
+        });
+
+        await nacistDalsiLogo();
+    }
+
+    async function nacistDalsiLogo() {
+        // Vybere náhodného YouTubera, který není stejný jako ten předchozí
+        let novyYoutuber = aktualniYoutuber;
+        if (YOUTUBERI.length > 1) {
+            while (novyYoutuber === aktualniYoutuber) {
+                novyYoutuber = YOUTUBERI[Math.floor(Math.random() * YOUTUBERI.length)];
+            }
+        }
+        aktualniYoutuber = novyYoutuber;
+        aktualniUroven = 1;
+        historiePokusu = [];
+
+        // UI Reset
+        document.getElementById('zprava').className = "info-zprava";
+        document.getElementById('zprava').innerHTML = "Zadej svůj první tip níže:";
+        document.getElementById('ovladani').style.display = 'block';
+        document.getElementById('dalsi-akce').style.display = 'none';
+        document.getElementById('historie-box').style.display = 'none';
+        document.getElementById('stats-vystup').style.display = 'none';
+        
+        const vklad = document.getElementById('tip-input');
+        vklad.value = "";
+        vklad.disabled = false;
+        document.getElementById('odeslat-btn').disabled = false;
+
+        // Sestaví nový přehledný název obrázku
+        const bezpecneJmeno = vytvorBezpecnyNazev(aktualniYoutuber);
+        const nazevObrazku = `${bezpecneJmeno}_roz_${aktualniUroven}.png`;
+        
+        const img = document.getElementById('logo-img');
+        img.className = "rozmazane-logo";
+        img.src = `./generovane_profily/${nazevObrazku}`;
+        
+        vklad.focus();
+    }
+
+    async function poslatTip() {
+        const vklad = document.getElementById('tip-input');
+        const tip = vklad.value.trim();
+        if (!tip) return;
+
+        vklad.disabled = true;
+        document.getElementById('odeslat-btn').disabled = true;
+
+        if (historiePokusu.length < 5) {
+            historiePokusu.push(tip);
+            aktualizujHistorii();
+        }
+
+        const zpravaDiv = document.getElementById('zprava');
+        const normTip = normalizujTextProPorovnani(tip);
+        const normSpravne = normalizujTextProPorovnani(aktualniYoutuber);
+
+        if (normTip === normSpravne) {
+            // Správná odpověď
+            zpravaDiv.className = "info-zprava spravne";
+            zpravaDiv.innerHTML = `Skvělá práce! Správná odpověď je <strong>${aktualniYoutuber}</strong>.`;
+            dokoncitKolo(true);
+        } else {
+            // Špatná odpověď
+            if (aktualniUroven < 5) {
+                aktualniUroven++;
+                zpravaDiv.className = "info-zprava vedle";
+                zpravaDiv.innerHTML = "To nebylo správně. Zkus to znovu!";
+                
+                const bezpecneJmeno = vytvorBezpecnyNazev(aktualniYoutuber);
+                const novyNazevObrazku = `${bezpecneJmeno}_roz_${aktualniUroven}.png`;
+                document.getElementById('logo-img').src = `./generovane_profily/${novyNazevObrazku}`;
+                
+                vklad.disabled = false;
+                document.getElementById('odeslat-btn').disabled = false;
+                vklad.value = "";
+                vklad.focus();
+            } else {
+                // Konec pokusů
+                zpravaDiv.className = "info-zprava spatne";
+                zpravaDiv.innerHTML = `Pokusy vyčerpány. Odpověď byla: <strong>${aktualniYoutuber}</strong>.`;
+                dokoncitKolo(false);
+            }
+        }
+    }
+
+    function aktualizujHistorii() {
+        const historieBox = document.getElementById('historie-box');
+        const seznam = document.getElementById('historie-seznam');
+        historieBox.style.display = 'block';
+        seznam.innerHTML = "";
+        historiePokusu.forEach((pokus, index) => {
+            let li = document.createElement("li");
+            li.innerHTML = `<span class="cislo-pokusu">${index + 1}. pokus:</span> <span class="text-pokusu">${pokus}</span>`;
+            seznam.appendChild(li);
+        });
+    }
+
+    function dokoncitKolo(vyhra) {
+        document.getElementById('ovladani').style.display = 'none';
+        document.getElementById('dalsi-akce').style.display = 'block';
+
+        // Odhalení ostrého loga
+        const img = document.getElementById('logo-img');
+        img.className = "ostre-logo";
+        img.src = `./logos/${aktualniYoutuber}.png`;
+
+        // Pevné statistiky pro demo verzi (aby to vypadalo realističtěji)
+        let stats = {
+            "1": 7,
+            "2": 15,
+            "3": 35,
+            "4": 32,
+            "5": 13,
+            "neuhodli": 5
+        };
+        
+        // Přidáme hráčův výsledek do grafu
+        if (vyhra) stats[aktualniUroven.toString()]++;
+        else stats["neuhodli"]++;
+
+        vykresliGraf(stats);
+    }
+
+    function vykresliGraf(stats) {
+        document.getElementById('stats-vystup').style.display = 'block';
+        const ctx = document.getElementById('grafStatistik').getContext('2d');
+
+        if (grafInstance) grafInstance.destroy();
+
+        const dataPokusu = [
+            parseInt(stats["1"]), parseInt(stats["2"]), parseInt(stats["3"]),
+            parseInt(stats["4"]), parseInt(stats["5"]), parseInt(stats["neuhodli"])
+        ];
+
+        grafInstance = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: ['1. pokus', '2. pokus', '3. pokus', '4. pokus', '5. pokus', 'Neuhodli'],
+                datasets: [{
+                    label: 'Hráčů celkem',
+                    data: dataPokusu,
+                    backgroundColor: ['#10B981', '#34D399', '#6EE7B7', '#A7F3D0', '#FCD34D', '#EF4444'],
+                    borderRadius: 6, borderWidth: 0, barThickness: 18
+                }]
+            },
+            options: {
+                indexAxis: 'y', responsive: true, maintainAspectRatio: false,
+                plugins: { legend: { display: false }, tooltip: { backgroundColor: '#1E293B', padding: 10, cornerRadius: 6 } },
+                scales: {
+                    x: { beginAtZero: true, grid: { display: false }, ticks: { precision: 0, color: '#64748B' } },
+                    y: { grid: { display: false }, ticks: { color: '#1E293B', font: { family: 'Inter', size: 12, weight: '500' } } }
+                }
+            }
+        });
+    }
+
+    function zobrazDemo() {
+        document.getElementById('hlavni-hra').style.display = 'none';
+        document.getElementById('gdpr-odkaz').style.display = 'none';
+        document.getElementById('demo-karta').style.display = 'flex';
+    }
+
+    function skryjDemo() {
+        document.getElementById('demo-karta').style.display = 'none';
+        document.getElementById('hlavni-hra').style.display = 'flex';
+        document.getElementById('gdpr-odkaz').style.display = 'block';
+    }
+
+    // Spuštění po načtení stránky
+    document.addEventListener("DOMContentLoaded", inicializaceHry);
+</script>
+
+</body>
+</html>
